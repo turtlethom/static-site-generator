@@ -1,5 +1,13 @@
 from enum import Enum
 
+class BlockType(Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    CODE = "code"
+    QUOTE = "quote"
+    UNORDERED_LIST = "unordered_list"
+    ORDERED_LIST = "ordered_list"
+
 class HTMLNode:
     def __init__(self, tag=None, value=None, children=None, props=None):
         self.tag = tag
@@ -41,7 +49,7 @@ class LeafNode(HTMLNode):
         if not self.value:
             raise ValueError("All leaf nodes must have a value")
         if not self.tag:
-            return f"{value}"
+            return f"{self.value}"
         if not self.props:
             return f"<{self.tag}>{self.value}</{self.tag}>"
         props_str = self.props_to_html()
