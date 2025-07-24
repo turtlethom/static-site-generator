@@ -1,4 +1,6 @@
 import os
+from .nodehelpers import markdown_to_html_node
+from .extracters import extract_title
 
 def copy_static(source="static", destination="public"):
     # Step 1: Remove destination directory manually if it exists
@@ -37,3 +39,23 @@ def copy_dir_recursive(src, dst):
             with open(dst_path, "wb") as f_dst:
                 f_dst.write(content)
             print(f"Copied: {src_path} → {dst_path}")
+
+def generate_page(from_path, template_path, dest_path):
+    print(f"Generating page from {from_path} to {dest_path} using {template_path}")
+    # Read markdown content
+    with open(from_path, "r", encoding="utf-8") as f:
+        markdown_content = f.read()
+    # Read template content
+    with open(template_path, "r", encoding="utf-8") as f:
+        template_content = f.read()
+    html_node = markdown_to_html_node(markdown_content)
+    html_content = html_node.to_html()
+    # Extract title
+    title = extract_title(markdown_content)
+    # Replace placeholders
+    full_html = template_content.replace("{{ Title }}", title).replace("{{ Content }}", html_content)
+    # Create destination directory if it doesn't exist
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    # Write the final HTML to the destination path
+    with open(dest_path, "w", encoding="utf-8") as f:
+        f.write(full_html)

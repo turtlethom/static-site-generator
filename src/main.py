@@ -1,8 +1,8 @@
-from functions.handle_static import copy_static
+from functions.generate import copy_static, copy_dir_recursive, generate_page
 
 def main():
-    copy_static()
-    print("Static files copied.")
+    print("Generating index.html...")
+    generate_page("content/index.md", "template.html", "public/index.html")
 
 if __name__ == "__main__":
     main()

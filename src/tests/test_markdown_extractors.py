@@ -1,5 +1,5 @@
 import unittest
-from functions.extracters import extract_markdown_images, extract_markdown_links
+from functions.extracters import extract_markdown_images, extract_markdown_links, extract_title
 
 class TestMarkdownExtractors(unittest.TestCase):
     def test_extract_markdown_images_single(self):
@@ -45,6 +45,35 @@ class TestMarkdownExtractors(unittest.TestCase):
             "No links, just ![images](img.png)"
         )
         self.assertListEqual([], matches)
+
+    def test_single_h1(self):
+        self.assertEqual(extract_title("# Hello World"), "Hello World")
+
+    def test_h1_with_extra_spaces(self):
+        self.assertEqual(extract_title("#    Trim Me   "), "Trim Me")
+
+    def test_multiple_headings(self):
+        markdown = """
+## Subtitle
+# Main Title
+### Another
+"""
+        self.assertEqual(extract_title(markdown), "Main Title")
+
+    def test_no_h1(self):
+        with self.assertRaises(ValueError):
+            extract_title("## Only Subtitle\n### Smaller Heading")
+
+    def test_h1_in_later_line(self):
+        markdown = """
+Some intro text
+
+# Real Title
+"""
+        self.assertEqual(extract_title(markdown), "Real Title")
+
+    def test_h1_with_trailing_spaces(self):
+        self.assertEqual(extract_title("# Heading   "), "Heading")
 
 if __name__ == "__main__":
     unittest.main()
