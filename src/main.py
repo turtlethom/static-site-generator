@@ -1,8 +1,8 @@
-from textnode import TextNode
+from functions.handle_static import copy_static
 
 def main():
-    text_node = TextNode("big booty latinas", "plain")
-    print(text_node)
+    copy_static()
+    print("Static files copied.")
 
 if __name__ == "__main__":
     main()
