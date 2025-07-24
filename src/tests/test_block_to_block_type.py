@@ -1,6 +1,6 @@
 import unittest
 from functions.nodehelpers import block_to_block_type
-from nodes.htmlnode import BlockType
+from enum_types import BlockType
 
 class TestBlockToBlockType(unittest.TestCase):
 

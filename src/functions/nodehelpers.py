@@ -1,7 +1,7 @@
-from nodes.textnode import TextType, TextNode
+from nodes.textnode import TextNode
 from nodes.htmlnode import LeafNode, HTMLNode, ParentNode
-from structs.stack import Stack
-from nodes.htmlnode import BlockType
+from functions.splitters import split_node_delimiter, split_nodes_image, split_nodes_link
+from enum_types import TextType, BlockType
 import re
 
 def text_node_to_html_node(text_node):
@@ -29,109 +29,20 @@ def text_node_to_html_node(text_node):
         case _:
             raise Exception(f"Unhandled text type: {text_type}")
 
-def split_node_delimiter(old_nodes, delimiter, text_type):
-    new_nodes = []
-    for node in old_nodes:
-        if node.text_type != TextType.TEXT:
-            new_nodes.append(node)
-            continue
-        parts = node.text.split(delimiter)
-        if len(parts) % 2 == 0:
-            new_nodes.append(node)
-            continue
-        for i, part in enumerate(parts):
-            if part == "":
-                continue
-            if i % 2 == 0:
-                new_nodes.append(TextNode(part, TextType.TEXT))
-            else:
-                new_nodes.append(TextNode(part, text_type))
-    return new_nodes
-
-def extract_markdown_images(text):
-    pattern = r"!\[([^\[\]]*)\]\(([^\(\)]*)\)"
-    return re.findall(pattern, text)
-
-def extract_markdown_links(text):
-    pattern = r"(?<!!)\[([^\[\]]*)\]\(([^\(\)]*)\)"
-    return re.findall(pattern, text)
-
-def split_nodes_image(old_nodes):
-    new_nodes = []
-
-    for node in old_nodes:
-        if node.text_type != TextType.TEXT:
-            new_nodes.append(node)
-            continue
-
-        text = node.text
-        matches = extract_markdown_images(text)
-
-        if not matches:
-            new_nodes.append(node)
-            continue
-
-        for alt, url in matches:
-            full_match = f"![{alt}]({url})"
-            before, after = text.split(full_match, 1)
-
-            if before:
-                new_nodes.append(TextNode(before, TextType.TEXT))
-            new_nodes.append(TextNode(alt, TextType.IMAGE, url))
-
-            text = after  # repeat on remaining text
-
-        if text:
-            new_nodes.append(TextNode(text, TextType.TEXT))
-
-    return new_nodes
-
-def split_nodes_link(old_nodes):
-    new_nodes = []
-
-    for node in old_nodes:
-        if node.text_type != TextType.TEXT:
-            new_nodes.append(node)
-            continue
-
-        text = node.text
-        matches = extract_markdown_links(text)
-
-        if not matches:
-            new_nodes.append(node)
-            continue
-
-        for label, url in matches:
-            full_match = f"[{label}]({url})"
-            before, after = text.split(full_match, 1)
-
-            if before:
-                new_nodes.append(TextNode(before, TextType.TEXT))
-            new_nodes.append(TextNode(label, TextType.LINK, url))
-
-            text = after  # repeat on remaining text
-
-        if text:
-            new_nodes.append(TextNode(text, TextType.TEXT))
-
-    return new_nodes
-
 def text_to_textnodes(text):
     nodes = [TextNode(text, TextType.TEXT)]
-
     # Order matters: format first, then image, then link
     nodes = split_node_delimiter(nodes, "**", TextType.BOLD)
     nodes = split_node_delimiter(nodes, "_", TextType.ITALIC)
     nodes = split_node_delimiter(nodes, "`", TextType.CODE)
     nodes = split_nodes_image(nodes)
     nodes = split_nodes_link(nodes)
-
     return nodes
+
 def markdown_to_blocks(markdown):
     blocks = []
     current_block = []
     in_code_block = False
-
     lines = markdown.split('\n')
 
     for line in lines:
@@ -158,32 +69,24 @@ def markdown_to_blocks(markdown):
                 current_block = []
         else:
             current_block.append(line)
-
     # append last block if any
     if current_block:
         blocks.append("\n".join(current_block).strip())
-
     return blocks
 
 def block_to_block_type(block: str) -> BlockType:
     lines = block.strip('\n\r ').split('\n')
-
     # Detect fenced code block with ``` fences (allow optional trailing spaces)
     if len(lines) >= 2 and lines[0].strip().startswith("```") and lines[-1].strip().startswith("```"):
         return BlockType.CODE
-
     if re.match(r"^#{1,6} ", lines[0]):
         return BlockType.HEADING
-
     if all(line.strip().startswith(">") for line in lines):
         return BlockType.QUOTE
-
     if all(line.strip().startswith("- ") for line in lines):
         return BlockType.UNORDERED_LIST
-
     if all(re.match(rf"^{i+1}\. ", line.strip()) for i, line in enumerate(lines)):
         return BlockType.ORDERED_LIST
-
     return BlockType.PARAGRAPH
 
 def markdown_to_html_node(markdown):
@@ -211,7 +114,6 @@ def block_to_html_node(block):
         return quote_to_html_node(block)
     raise ValueError("invalid block type")
 
-
 def text_to_children(text):
     text_nodes = text_to_textnodes(text)
     children = []
@@ -220,13 +122,11 @@ def text_to_children(text):
         children.append(html_node)
     return children
 
-
 def paragraph_to_html_node(block):
     lines = block.split("\n")
     paragraph = " ".join(line.strip() for line in lines if line.strip())
     children = text_to_children(paragraph)
     return ParentNode("p", children)
-
 
 def heading_to_html_node(block):
     level = 0
@@ -240,7 +140,6 @@ def heading_to_html_node(block):
     text = block[level:].strip()  # remove leading #s and any spaces
     children = text_to_children(text)
     return ParentNode(f"h{level}", children)
-
 
 def code_to_html_node(block):
     if not block.startswith("```") or not block.endswith("```"):
@@ -270,7 +169,6 @@ def olist_to_html_node(block):
         html_items.append(ParentNode("li", children))
     return ParentNode("ol", html_items)
 
-
 def ulist_to_html_node(block):
     items = block.split("\n")
     html_items = []
@@ -279,7 +177,6 @@ def ulist_to_html_node(block):
         children = text_to_children(text)
         html_items.append(ParentNode("li", children))
     return ParentNode("ul", html_items)
-
 
 def quote_to_html_node(block):
     lines = block.split("\n")

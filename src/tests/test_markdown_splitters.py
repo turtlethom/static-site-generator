@@ -1,6 +1,7 @@
 import unittest
-from nodes.textnode import TextNode, TextType
-from functions.nodehelpers import split_node_delimiter, split_nodes_image, split_nodes_link  # adjust this import as needed
+from nodes.textnode import TextNode
+from enum_types import TextType
+from functions.splitters import split_node_delimiter, split_nodes_image, split_nodes_link
 
 class TestMarkdownSplitters(unittest.TestCase):
     def test_no_delimiter(self):
