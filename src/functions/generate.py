@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from .nodehelpers import markdown_to_html_node
 from .extracters import extract_title
 
@@ -40,7 +41,7 @@ def copy_dir_recursive(src, dst):
                 f_dst.write(content)
             print(f"Copied: {src_path} → {dst_path}")
 
-def generate_page(from_path, template_path, dest_path):
+def generate_page(from_path, template_path, dest_path, base_path="/"):
     print(f"Generating page from {from_path} to {dest_path} using {template_path}")
     # Read markdown content
     with open(from_path, "r", encoding="utf-8") as f:
@@ -48,14 +49,39 @@ def generate_page(from_path, template_path, dest_path):
     # Read template content
     with open(template_path, "r", encoding="utf-8") as f:
         template_content = f.read()
+
     html_node = markdown_to_html_node(markdown_content)
     html_content = html_node.to_html()
-    # Extract title
     title = extract_title(markdown_content)
+
     # Replace placeholders
-    full_html = template_content.replace("{{ Title }}", title).replace("{{ Content }}", html_content)
+    full_html = (
+        template_content
+        .replace("{{ Title }}", title)
+        .replace("{{ Content }}", html_content)
+        .replace('href="/', f'href="{base_path}')
+        .replace('src="/', f'src="{base_path}')
+    )
     # Create destination directory if it doesn't exist
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
     # Write the final HTML to the destination path
     with open(dest_path, "w", encoding="utf-8") as f:
         f.write(full_html)
+
+def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, base_path="/"):
+    for root, _, files in os.walk(dir_path_content):
+        for file in files:
+            if file.endswith(".md"):
+                # Build full path to the markdown file
+                md_path = os.path.join(root, file)
+                
+                # Build corresponding destination path
+                rel_path = os.path.relpath(md_path, dir_path_content)  # e.g., "blog/post.md"
+                dest_rel_path = os.path.splitext(rel_path)[0] + ".html"  # replace .md with .html
+                dest_path = os.path.join(dest_dir_path, dest_rel_path)
+
+                # Ensure destination directory exists
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+
+                print(f"Generating {md_path} -> {dest_path}")
+                generate_page(md_path, template_path, dest_path, base_path)
